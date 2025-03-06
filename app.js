@@ -21,9 +21,13 @@ app.use(cors())
 
 // Routes
 const roleRoutes = require("./src/routes/RoleRoutes");
-const userRoutes = require("./src/routes/UserRoutes")
+const userRoutes = require("./src/routes/UserRoutes");
+const propertyRoutes = require("./src/routes/PropertyRoutes");
+const visitpropertyRoutes = require("./src/routes/VisitpropertyRoutes");
 app.use("/api", roleRoutes); //  Add API prefix
 app.use(userRoutes);
+app.use( propertyRoutes); 
+app.use(visitpropertyRoutes);
 
 // Sample routes
 // app.get("/test", (req, res) => {

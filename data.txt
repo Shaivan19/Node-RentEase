@@ -78,3 +78,9 @@ Abstract:
 | property_id   | INT             | FOREIGN KEY REFERENCES properties(id)        |
 | created_at    | TIMESTAMP       | DEFAULT CURRENT_TIMESTAMP                    |
 ------------------------------------------------------------------------------------
+
+
+
+
+
+
