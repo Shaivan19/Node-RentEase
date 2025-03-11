@@ -78,29 +78,14 @@ const login = async (req, res) => {
 
 const signup = async (req, res) => {
   try {
-    console.log("Received signup request:", req.body);  // Debugging
-
     const { username, email, password, userType } = req.body;
-
-    if (!username || !email || !password || !userType) {
-      return res.status(400).json({ message: "All fields are required." });
-    }
 
     // Check if email is already registered
     const existingTenant = await Tenant.findOne({ email });
     const existingLandlord = await Landlord.findOne({ email });
 
     if (existingTenant || existingLandlord) {
-      console.log("Duplicate Email Found:", email);
       return res.status(400).json({ message: "Email already registered." });
-    }
-
-    // Convert userType to lowercase to avoid errors
-    const lowerUserType = userType.toLowerCase();  
-
-    if (lowerUserType !== "tenant" && lowerUserType !== "landlord") {
-      console.log("Invalid userType:", userType);
-      return res.status(400).json({ message: "Invalid user type. Must be 'tenant' or 'landlord'." });
     }
 
     // Hash password before storing
@@ -108,23 +93,31 @@ const signup = async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, salt);
 
     let newUser;
-    if (lowerUserType === "tenant") {
+    
+    if (userType === "tenant") {
       newUser = await Tenant.create({ username, email, password: hashedPassword });
-    } else {
+    } else if (userType === "landlord") {
       newUser = await Landlord.create({ username, email, password: hashedPassword });
+    } else {
+      return res.status(400).json({ message: "Invalid user type. Must be 'tenant' or 'landlord'." });
     }
 
-    console.log("User Created Successfully:", newUser);
+    console.log("✅ User Created Successfully:", newUser);
 
-    await mailutil.sendMail(email, "Welcome to RentEase", `Hello ${username}, your account has been successfully created.`);
+    // Send Welcome Email
+    await mailutil.sendingMail(
+      email,
+      "Welcome to RentEase!",
+      `Hello ${username},\n\nYour account has been successfully created on RentEase.\n\nHappy Renting!\n\n- RentEase Team`
+    );
 
-    res.status(201).json({ message: `${lowerUserType} registered successfully.`, data: newUser });
-
+    res.status(201).json({ message: `${userType} registered successfully.`, data: newUser });
   } catch (error) {
-    console.error("Signup Error:", error.message);
+    console.error("🔥 Signup Error:", error);
     res.status(500).json({ message: "Error creating user.", error: error.message });
   }
 };
+
 
 
 // -------------> Get All Users (Both Tenants and Landlords)
