@@ -105,11 +105,18 @@ const signup = async (req, res) => {
     console.log("✅ User Created Successfully:", newUser);
 
     // Send Welcome Email
+    // await mailutil.sendingMail(
+    //   email,
+    //   "Welcome to RentEase!",
+    //   `Hello ${username},\n\nYour account has been successfully created on RentEase.\n\nHappy Renting!\n\n- RentEase Team`
+    // );
+
     await mailutil.sendingMail(
       email,
       "Welcome to RentEase!",
-      `Hello ${username},\n\nYour account has been successfully created on RentEase.\n\nHappy Renting!\n\n- RentEase Team`
+      `Hello ${username},\n\nCongratulations! 🎉 Your account has been successfully created on RentEase.\n\nWe’re excited to have you on board! Start exploring rental properties or listing your own with ease.\n\nHappy Renting! 🏡\n\nIf you have any questions or need assistance, feel free to contact our support team. \n\n- The RentEase Team`
     );
+    
 
     res.status(201).json({ message: `${userType} registered successfully.`, data: newUser });
   } catch (error) {

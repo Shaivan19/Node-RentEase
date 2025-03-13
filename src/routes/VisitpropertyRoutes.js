@@ -1,17 +1,11 @@
 const express = require("express");
 const router = express.Router();
-const VisitController = require("../controllers/VisitpropertyController");
+const visitController = require("../controllers/VisitpropertyController");
 
-// Schedule a visit
-router.post("/schedule", VisitController.scheduleVisit);
-
-// Get all visits
-router.get("/allvisit", VisitController.getAllVisits);
-
-// Get visit by ID
-router.get("/visit/:id", VisitController.getVisitById);
-
-// Delete a visit request
-router.delete("/visit/:id", VisitController.deleteVisit);
+router.post("/visit/schedule", visitController.scheduleVisit);
+router.put("/visit/reschedule/:id", visitController.rescheduleVisit);
+router.delete("/visit/cancel/:id", visitController.cancelVisit);
+router.get("/allvisit", visitController.getAllVisits);
+router.get("/visit/:id", visitController.getVisitById);
 
 module.exports = router;

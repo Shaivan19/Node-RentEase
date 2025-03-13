@@ -2,38 +2,50 @@ const mongoose = require("mongoose");
 
 const visitSchema = new mongoose.Schema(
   {
-    property: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Property",
-      required: true,
+    tenant: { 
+      type: mongoose.Schema.Types.ObjectId, 
+      ref: "Tenant", 
+      required: true 
+    }, 
+    landlord: { 
+      type: mongoose.Schema.Types.ObjectId, 
+      ref: "Landlord", 
+      required: true 
+    }, 
+    property: { 
+      type: mongoose.Schema.Types.ObjectId, 
+      ref: "Property", 
+      required: true 
+    }, 
+    visitDate: { 
+      type: Date, 
+      required: true 
+    }, 
+    visitTime: { 
+      type: String, 
+      required: true 
+    }, 
+    previousVisitDate: { 
+      type: Date 
+    }, // Store old date when rescheduled
+    previousVisitTime: { 
+      type: String 
+    }, // Store old time when rescheduled
+    status: { 
+      type: String, 
+      enum: ["scheduled", "rescheduled", "completed", "cancelled"], 
+      default: "scheduled" 
     },
-    visitorName: {
-      type: String,
-      required: true,
-      trim: true,
-    },
-    visitorEmail: {
-      type: String,
-      required: true,
-      trim: true,
-      lowercase: true,
-    },
-    visitorPhone: {
-      type: String,
-      required: true,
-      trim: true,
-    },
-    visitDate: {
-      type: Date,
-      required: true,
-    },
-    createdAt: {
-      type: Date,
-      default: Date.now,
-    },
+    message: { 
+      type: String, 
+      trim: true 
+    }, 
+    cancellationReason: { 
+      type: String, 
+      trim: true 
+    } // Store reason if visit is cancelled
   },
   { timestamps: true }
 );
 
-const Visit = mongoose.model("Visit", visitSchema);
-module.exports = Visit;
+module.exports = mongoose.model("Visit", visitSchema);
