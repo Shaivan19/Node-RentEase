@@ -9,7 +9,8 @@ const login = async (req, res) => {
     const { email, password } = req.body;
 
     // Check existence of tenant user
-    let foundUser = await Tenant.findOne({ email }).populate('roleId');
+    let foundUser = await Tenant.findOne({ email })
+    // .populate('roleId');
     let userType = "Tenant";
 
     // not in tenant, check in Landlord collection
