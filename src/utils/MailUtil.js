@@ -39,7 +39,7 @@ const sendingMail = async (to, subject, text) => {
             service: 'gmail',
             auth: {
                 user: "shaivan1909@gmail.com",
-                pass: "hion aqrt aabh tjkt" // Replace with the generated App Password
+                pass: "hion aqrt aabh tjkt"
             }
         });
 
