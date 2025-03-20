@@ -9,7 +9,7 @@
 //         service: 'gmail',
 //         auth:{
 //             user:"shaivan1909@gmail.com",
-//             pass:"Shaiv@nR@#1909"
+
 //         }
 //     })
 
