@@ -18,7 +18,7 @@ const app = express();
 // Middleware
 app.use(express.json()); //  Allow JSON parsing
 app.use(cors())
-
+app.use(express.urlencoded({ extended: true })); //  Allow URL Encoded data
 // Routes
 const roleRoutes = require("./src/routes/RoleRoutes");
 const userRoutes = require("./src/routes/UserRoutes");

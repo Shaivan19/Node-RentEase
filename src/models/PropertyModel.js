@@ -27,11 +27,11 @@ const propertySchema = new mongoose.Schema(
       ref: "User",
       required: true,
     },
-    images: [
-      {
-        type: String, // URLs of images
-      },
-    ],
+    images: {
+      type: [String], // Array of image URLs
+      required: true,
+      default: [],
+    },
     propertyType: {
       type: String,
       enum: ["Apartment", "House", "Villa", "Studio", "Commercial"],
@@ -52,20 +52,14 @@ const propertySchema = new mongoose.Schema(
       default: false,
     },
     availableFrom: {
-      type: Date,
-      required: true,
+      type: Date, // Optional if available immediately
     },
-    amenities: [
-      {
-        type: String,
-      },
-    ],
-    createdAt: {
-      type: Date,
-      default: Date.now,
+    amenities: {
+      type: [String], // Array of amenities (e.g., "WiFi", "Gym")
+      default: [],
     },
   },
-  { timestamps: true }
+  { timestamps: true } // Adds createdAt & updatedAt automatically
 );
 
 const Property = mongoose.model("Property", propertySchema);

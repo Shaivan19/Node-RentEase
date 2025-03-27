@@ -8,23 +8,18 @@ const login = async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    // Check existence of tenant user
-    let foundUser = await Tenant.findOne({ email })
-    // .populate('roleId');
+    let foundUser = await Tenant.findOne({ email });
     let userType = "Tenant";
 
-    // not in tenant, check in Landlord collection
     if (!foundUser) {
       foundUser = await Landlord.findOne({ email });
       userType = "Landlord";
     }
 
-    // if user does not exist in both
     if (!foundUser) {
       return res.status(404).json({ message: "Email not found." });
     }
 
-    // Compare entered password with the stored password
     const isMatch = await bcrypt.compare(password, foundUser.password);
     if (!isMatch) {
       return res.status(401).json({ message: "Invalid credentials." });
@@ -33,10 +28,11 @@ const login = async (req, res) => {
     res.status(200).json({
       message: `Login successful. Welcome ${userType}!`,
       userType,
-      data:{
-        userId:foundUser._id,
+      data: {
+        userId: foundUser._id,
         username: foundUser.username,
-      }
+        phone: foundUser.phone || null, // Only for landlords
+      },
     });
   } catch (error) {
     res.status(500).json({ message: "Error during login.", error: error.message });
@@ -44,44 +40,10 @@ const login = async (req, res) => {
 };
 
 //-----------------> User Signup
-// const signup = async (req, res) => {
-//   try {
-//     const {username, email, password, userType } = req.body;
-
-//     // Cjeck if email is already registered in any collection
-//     const existingTenant = await Tenant.findOne({ email });
-//     const existingLandlord = await Landlord.findOne({ email });
-
-//     if (existingTenant || existingLandlord) {
-//       return res.status(400).json({ message: "Email already registered." });
-//     }
-
-//     // hash password before storing
-//     const salt = await bcrypt.genSalt(10);
-//     const hashedPassword = await bcrypt.hash(password, salt);
-
-//     let newUser;
-    
-//     if (userType === "tenant") {
-//       newUser = await Tenant.create({ ...req.body, password: hashedPassword });
-//     } else if (userType === "landlord") {
-//       newUser = await Landlord.create({ ...req.body, password: hashedPassword });
-//     } else {
-//       return res.status(400).json({ message: "Invalid user type. Must be 'tenant' or 'landlord'." });
-//     }
-//     await mailutil.sendMail(email, "Welcome to RentEase", `Hello ${newUser.username}, your account has been successfully created.`);
-
-//     res.status(201).json({ message: `${userType} registered successfully.`, data: newUser });
-//   } catch (error) {
-//     res.status(500).json({ message: "Error creating user.", error: error.message });
-//   }
-// };
-
 const signup = async (req, res) => {
   try {
-    const { username, email, password, userType } = req.body;
+    const { username, email, password, userType, phone } = req.body;
 
-    // Check if email is already registered
     const existingTenant = await Tenant.findOne({ email });
     const existingLandlord = await Landlord.findOne({ email });
 
@@ -89,35 +51,29 @@ const signup = async (req, res) => {
       return res.status(400).json({ message: "Email already registered." });
     }
 
-    // Hash password before storing
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
     let newUser;
-    
+
     if (userType === "tenant") {
       newUser = await Tenant.create({ username, email, password: hashedPassword });
     } else if (userType === "landlord") {
-      newUser = await Landlord.create({ username, email, password: hashedPassword });
+      if (!phone) {
+        return res.status(400).json({ message: "Phone number is required for landlords." });
+      }
+      newUser = await Landlord.create({ username, email, password: hashedPassword, phone });
     } else {
       return res.status(400).json({ message: "Invalid user type. Must be 'tenant' or 'landlord'." });
     }
 
     console.log("✅ User Created Successfully:", newUser);
 
-    // Send Welcome Email
-    // await mailutil.sendingMail(
-    //   email,
-    //   "Welcome to RentEase!",
-    //   `Hello ${username},\n\nYour account has been successfully created on RentEase.\n\nHappy Renting!\n\n- RentEase Team`
-    // );
-
     await mailutil.sendingMail(
       email,
       "Welcome to RentEase!",
-      `Hello ${username},\n\nCongratulations! 🎉 Your account has been successfully created on RentEase.\n\nWe’re excited to have you on board! Start exploring rental properties or listing your own with ease.\n\nHappy Renting! 🏡\n\nIf you have any questions or need assistance, feel free to contact our support team. \n\n- The RentEase Team`
+      `Hello ${username},\n\nCongratulations! 🎉 Your account has been successfully created on RentEase.\n\nStart exploring rental properties or listing your own with ease.\n\n- The RentEase Team`
     );
-    
 
     res.status(201).json({ message: `${userType} registered successfully.`, data: newUser });
   } catch (error) {
@@ -125,8 +81,6 @@ const signup = async (req, res) => {
     res.status(500).json({ message: "Error creating user.", error: error.message });
   }
 };
-
-
 
 // -------------> Get All Users (Both Tenants and Landlords)
 const getAllUsers = async (req, res) => {
@@ -184,5 +138,9 @@ const getUserById = async (req, res) => {
 };
 
 module.exports = {
-  login,signup,getAllUsers,deleteUser,getUserById,
+  login,
+  signup,
+  getAllUsers,
+  deleteUser,
+  getUserById,
 };

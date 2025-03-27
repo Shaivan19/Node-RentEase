@@ -8,9 +8,16 @@ const imageSchema = new mongoose.Schema(
       required: true,
     },
     imageUrl: {
-      type: String, // Path where the image is stored
+      type: [String], // Path where the image is stored
       required: true,
     },
+
+    // price: {
+    //   type: Number,
+    //   required: true,
+    // },
+    
+
     longitude: {
       type: Number,
       required: true,

@@ -27,15 +27,3 @@ const sendingMail = async (to, subject, text) => {
 };
 
 module.exports = { sendingMail };
-
-
-
-
-
-
-
-
-
-
-
-// 
