@@ -3,6 +3,8 @@ const mongoose = require("mongoose");
 const multer = require("multer");
 const path = require("path");
 const cloudinaryUtil = require("../utils/CloudinaryUtil");
+const mailutil = require("../utils/MailUtil");
+const Landlord = require("../models/LandlordModel");
 
 
 
@@ -21,7 +23,7 @@ const cloudinaryUtil = require("../utils/CloudinaryUtil");
 // Configure multer storage
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
-    cb(null, "uploads/"); // Save files in "uploads" folder
+    cb(null, "uploads/"); // Save files temporarily in "uploads" folder
   },
   filename: function (req, file, cb) {
     cb(null, Date.now() + "-" + file.originalname); // Unique filename
@@ -29,16 +31,89 @@ const storage = multer.diskStorage({
 });
 
 // Multer upload middleware
-const upload = multer({ storage: storage }); // 4 images allowed
-
+const upload = multer({ storage: storage });
 
 const createProperty = async (req, res) => {
   try {
-    const { title, description, price, location, owner, propertyType, bedrooms, bathrooms, availableFrom } = req.body;
+    console.log("\n=== Property Creation Request ===");
+    console.log("Request Body:", JSON.stringify(req.body, null, 2));
+    console.log("Request Files:", req.files ? req.files.map(f => f.filename) : 'No files');
+    
+    const { 
+      title, 
+      description, 
+      price, 
+      location, 
+      owner, 
+      propertyType, 
+      bedrooms, 
+      bathrooms, 
+      availableFrom,
+      address,
+      furnished,
+      amenities 
+    } = req.body;
+
+    console.log("\n=== Parsed Fields ===");
+    console.log("Title:", title);
+    console.log("Description:", description);
+    console.log("Price:", price);
+    console.log("Location:", location);
+    console.log("Owner:", owner);
+    console.log("Property Type:", propertyType);
+    console.log("Bedrooms:", bedrooms);
+    console.log("Bathrooms:", bathrooms);
+    console.log("Available From:", availableFrom);
+    console.log("Address:", address);
+    console.log("Furnished:", furnished);
+    console.log("Amenities:", amenities);
 
     // Check for missing required fields
-    if (!title || !description || !price || !location || !owner || !propertyType || bedrooms == null || bathrooms == null || !availableFrom) {
-      return res.status(400).json({ error: "Missing required fields" });
+    const missingFields = {
+      title: !title,
+      description: !description,
+      price: !price,
+      location: !location,
+      owner: !owner,
+      propertyType: !propertyType,
+      bedrooms: bedrooms == null,
+      bathrooms: bathrooms == null,
+      availableFrom: !availableFrom,
+      address: !address
+    };
+
+    console.log("\n=== Missing Fields Check ===");
+    console.log(JSON.stringify(missingFields, null, 2));
+
+    if (!title || !description || !price || !location || !owner || !propertyType || 
+        bedrooms == null || bathrooms == null || !availableFrom || !address) {
+      return res.status(400).json({ 
+        error: "Missing required fields",
+        missingFields: Object.entries(missingFields)
+          .filter(([_, isMissing]) => isMissing)
+          .map(([field]) => field)
+      });
+    }
+
+    // Validate address fields
+    const missingAddressFields = {
+      street: !address.street,
+      city: !address.city,
+      state: !address.state,
+      zipCode: !address.zipCode,
+      country: !address.country
+    };
+
+    console.log("\n=== Missing Address Fields Check ===");
+    console.log(JSON.stringify(missingAddressFields, null, 2));
+
+    if (!address.street || !address.city || !address.state || !address.zipCode || !address.country) {
+      return res.status(400).json({ 
+        error: "Missing required address fields",
+        missingFields: Object.entries(missingAddressFields)
+          .filter(([_, isMissing]) => isMissing)
+          .map(([field]) => field)
+      });
     }
 
     // Validate owner ID format
@@ -46,21 +121,71 @@ const createProperty = async (req, res) => {
       return res.status(400).json({ error: "Invalid owner ID" });
     }
 
-    // Handle image uploads
-    let imagePaths = [];
-    if (req.files) {
-      imagePaths = req.files.map(file => file.path);
+    // Get landlord details for email
+    const landlord = await Landlord.findById(owner);
+    if (!landlord) {
+      return res.status(404).json({ error: "Landlord not found" });
     }
 
-    // Create property with uploaded image paths
+    // Handle image uploads to Cloudinary
+    let imageUrls = [];
+    if (req.files && req.files.length > 0) {
+      try {
+        // Upload each image to Cloudinary
+        for (const file of req.files) {
+          const cloudinaryResponse = await cloudinaryUtil.uploadFileToCloudinary(file);
+          imageUrls.push(cloudinaryResponse.secure_url);
+        }
+      } catch (uploadError) {
+        console.error("Cloudinary Upload Error:", uploadError);
+        return res.status(500).json({ error: "Error uploading images to cloud storage" });
+      }
+    }
+
+    // Create property with Cloudinary image URLs
     const property = new Property({
       ...req.body,
-      images: imagePaths, // Store file paths in database
+      images: imageUrls,
+      furnished: furnished === 'true',
+      amenities: amenities ? amenities.split(',') : []
     });
 
     await property.save();
+
+    // Send confirmation email to landlord
+    const emailSubject = "Property Listed Successfully!";
+    const emailBody = `
+      Dear ${landlord.username},
+
+      Congratulations! Your property "${title}" has been successfully listed on RentEase.
+
+      Property Details:
+      - Title: ${title}
+      - Location: ${location}
+      - Price: ₹${price}
+      - Type: ${propertyType}
+      - Bedrooms: ${bedrooms}
+      - Bathrooms: ${bathrooms}
+      - Available From: ${new Date(availableFrom).toLocaleDateString()}
+      - Address: ${address.street}, ${address.city}, ${address.state} ${address.zipCode}, ${address.country}
+
+      You can manage your property listing from your dashboard.
+
+      Best regards,
+      The RentEase Team
+    `;
+
+    try {
+      await mailutil.sendingMail(landlord.email, emailSubject, emailBody);
+      console.log("✅ Property creation confirmation email sent successfully");
+    } catch (emailError) {
+      console.error("🔥 Error sending property creation email:", emailError);
+      // Don't fail the request if email fails
+    }
+
     res.status(201).json(property);
   } catch (error) {
+    console.error("Property Creation Error:", error);
     res.status(400).json({ error: error.message });
   }
 };
