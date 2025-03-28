@@ -9,6 +9,7 @@ routes.get("/properties", propertyController.getAllProperties);
 // routes.post("/addproperties", propertyController.createProperty);
 routes.get("/properties/:id", propertyController.getPropertyById);
 routes.delete("/properties/:id", propertyController.deleteProperty);
+routes.get("/properties/landlord/:landlordId", propertyController.getPropertiesByLandlord);
 
 module.exports = routes;
 
