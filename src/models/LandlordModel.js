@@ -17,7 +17,17 @@ const LandlordSchema = new mongoose.Schema({
   phone: {
       type: String,
       required: true
-  }
+  },
+  avatar: {
+      type: String,
+      default: null
+  },
+  userType: {
+      type: String,
+      default: "Landlord"
+  },
+  resetPasswordToken: String,
+  resetPasswordExpires: Date
 });
 
 module.exports = mongoose.model("Landlord", LandlordSchema);

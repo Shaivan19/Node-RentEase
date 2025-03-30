@@ -14,8 +14,16 @@ const TenantSchema = new mongoose.Schema({
       type: String,
       required: true 
     },
+  avatar: {
+      type: String,
+      default: null
+  },
+  userType: {
+      type: String,
+      default: "Tenant"
+  },
+  resetPasswordToken: String,
+  resetPasswordExpires: Date
 });
-
-
 
 module.exports = mongoose.model("Tenant", TenantSchema);

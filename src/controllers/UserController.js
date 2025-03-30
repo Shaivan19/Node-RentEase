@@ -3,6 +3,30 @@ const jwt = require("jsonwebtoken");
 const Tenant = require("../models/TenantModel");
 const Landlord = require("../models/LandlordModel");
 const mailutil = require("../utils/MailUtil");
+const multer = require("multer");
+const path = require("path");
+const crypto = require('crypto');
+
+// Configure multer for file upload
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, 'uploads/avatars/');
+  },
+  filename: function (req, file, cb) {
+    cb(null, Date.now() + path.extname(file.originalname));
+  }
+});
+
+const upload = multer({
+  storage: storage,
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
+  fileFilter: function (req, file, cb) {
+    if (!file.originalname.match(/\.(jpg|jpeg|png|gif)$/)) {
+      return cb(new Error('Only image files are allowed!'), false);
+    }
+    cb(null, true);
+  }
+});
 
 //------------------------> User Login
 const login = async (req, res) => {
@@ -150,10 +174,229 @@ const getUserById = async (req, res) => {
   }
 };
 
+//-------------> Get User Profile
+const getUserProfile = async (req, res) => {
+  try {
+    const userId = req.user.id; // Get user ID from JWT token
+    const userType = req.user.userType; // Get user type from JWT token
+
+    let user;
+    if (userType === "Tenant") {
+      user = await Tenant.findById(userId).select("-password"); // Exclude password
+    } else if (userType === "Landlord") {
+      user = await Landlord.findById(userId).select("-password"); // Exclude password
+    }
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found." });
+    }
+
+    res.status(200).json({
+      message: "User profile retrieved successfully",
+      userType,
+      data: user
+    });
+  } catch (error) {
+    res.status(500).json({ message: "Error retrieving user profile.", error: error.message });
+  }
+};
+
+//-------------> Update User Profile
+const updateUserProfile = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const userType = req.user.userType;
+    const { username, email, phone } = req.body;
+
+    let user;
+    if (userType === "Tenant") {
+      user = await Tenant.findById(userId);
+    } else if (userType === "Landlord") {
+      user = await Landlord.findById(userId);
+    }
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found." });
+    }
+
+    // Update fields if provided
+    if (username) user.username = username;
+    if (email) user.email = email;
+    if (phone && userType === "Landlord") user.phone = phone;
+
+    await user.save();
+
+    res.status(200).json({
+      message: "User profile updated successfully",
+      userType,
+      data: {
+        id: user._id,
+        username: user.username,
+        email: user.email,
+        phone: user.phone || null
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ message: "Error updating user profile.", error: error.message });
+  }
+};
+
+//-------------> Update Password
+const updatePassword = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const userType = req.user.userType;
+    const { currentPassword, newPassword } = req.body;
+
+    let user;
+    if (userType === "Tenant") {
+      user = await Tenant.findById(userId);
+    } else if (userType === "Landlord") {
+      user = await Landlord.findById(userId);
+    }
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found." });
+    }
+
+    // Verify current password
+    const isMatch = await bcrypt.compare(currentPassword, user.password);
+    if (!isMatch) {
+      return res.status(401).json({ message: "Current password is incorrect." });
+    }
+
+    // Hash new password
+    const salt = await bcrypt.genSalt(10);
+    user.password = await bcrypt.hash(newPassword, salt);
+    await user.save();
+
+    res.status(200).json({ message: "Password updated successfully" });
+  } catch (error) {
+    res.status(500).json({ message: "Error updating password.", error: error.message });
+  }
+};
+
+//-------------> Update Avatar
+const updateAvatar = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const userType = req.user.userType;
+    const avatarPath = req.file.path;
+
+    let user;
+    if (userType === "Tenant") {
+      user = await Tenant.findById(userId);
+    } else if (userType === "Landlord") {
+      user = await Landlord.findById(userId);
+    }
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found." });
+    }
+
+    user.avatar = avatarPath;
+    await user.save();
+
+    res.status(200).json({
+      message: "Avatar updated successfully",
+      data: {
+        avatar: avatarPath
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ message: "Error updating avatar.", error: error.message });
+  }
+};
+
+//-------------> Reset Password Request
+const requestPasswordReset = async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    // Find user in both Tenant and Landlord collections
+    let user = await Tenant.findOne({ email });
+    let userType = "Tenant";
+
+    if (!user) {
+      user = await Landlord.findOne({ email });
+      userType = "Landlord";
+    }
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found." });
+    }
+
+    // Generate reset token
+    const resetToken = crypto.randomBytes(32).toString('hex');
+    const resetTokenExpiry = Date.now() + 3600000; // 1 hour
+
+    // Save reset token to user
+    user.resetPasswordToken = resetToken;
+    user.resetPasswordExpires = resetTokenExpiry;
+    await user.save();
+
+    // Send reset email
+    const resetUrl = `${process.env.FRONTEND_URL}/reset-password/${resetToken}`;
+    await mailutil.sendingMail(
+      email,
+      "Password Reset Request",
+      `Hello ${user.username},\n\nYou requested a password reset. Click the link below to reset your password:\n\n${resetUrl}\n\nThis link will expire in 1 hour.\n\nIf you didn't request this, please ignore this email.\n\n- The RentEase Team`
+    );
+
+    res.status(200).json({ message: "Password reset email sent." });
+  } catch (error) {
+    res.status(500).json({ message: "Error requesting password reset.", error: error.message });
+  }
+};
+
+//-------------> Reset Password
+const resetPassword = async (req, res) => {
+  try {
+    const { token, newPassword } = req.body;
+
+    // Find user with valid reset token
+    let user = await Tenant.findOne({
+      resetPasswordToken: token,
+      resetPasswordExpires: { $gt: Date.now() }
+    });
+    let userType = "Tenant";
+
+    if (!user) {
+      user = await Landlord.findOne({
+        resetPasswordToken: token,
+        resetPasswordExpires: { $gt: Date.now() }
+      });
+      userType = "Landlord";
+    }
+
+    if (!user) {
+      return res.status(400).json({ message: "Invalid or expired reset token." });
+    }
+
+    // Hash new password
+    const salt = await bcrypt.genSalt(10);
+    user.password = await bcrypt.hash(newPassword, salt);
+    user.resetPasswordToken = undefined;
+    user.resetPasswordExpires = undefined;
+    await user.save();
+
+    res.status(200).json({ message: "Password has been reset successfully." });
+  } catch (error) {
+    res.status(500).json({ message: "Error resetting password.", error: error.message });
+  }
+};
+
 module.exports = {
   login,
   signup,
   getAllUsers,
   deleteUser,
   getUserById,
+  getUserProfile,
+  updateUserProfile,
+  updatePassword,
+  updateAvatar,
+  upload,
+  requestPasswordReset,
+  resetPassword
 };
