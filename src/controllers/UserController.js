@@ -1,4 +1,5 @@
 const bcrypt = require("bcrypt");
+const jwt = require("jsonwebtoken");
 const Tenant = require("../models/TenantModel");
 const Landlord = require("../models/LandlordModel");
 const mailutil = require("../utils/MailUtil");
@@ -25,13 +26,25 @@ const login = async (req, res) => {
       return res.status(401).json({ message: "Invalid credentials." });
     }
 
+    // Generate JWT Token
+    const token = jwt.sign(
+      { 
+        id: foundUser._id,
+        userType,
+        email: foundUser.email
+      },
+      process.env.JWT_SECRET || 'your-secret-key',
+      { expiresIn: '24h' }
+    );
+
     res.status(200).json({
       message: `Login successful. Welcome ${userType}!`,
       userType,
+      token,
       data: {
         userId: foundUser._id,
         username: foundUser.username,
-        phone: foundUser.phone || null, // Only for landlords
+        phone: foundUser.phone || null,
       },
     });
   } catch (error) {

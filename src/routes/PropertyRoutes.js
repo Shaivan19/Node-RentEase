@@ -12,4 +12,3 @@ routes.delete("/properties/:id", propertyController.deleteProperty);
 routes.get("/properties/landlord/:landlordId", propertyController.getPropertiesByLandlord);
 
 module.exports = routes;
-

@@ -6,9 +6,6 @@
 
 // // user.printUserData(100)
 
-
-
-
 const express = require("express");
 const mongoose = require("mongoose");
 const cors= require("cors");
@@ -44,4 +41,7 @@ const PORT = 1909;
             console.log("Server started on port:", PORT);
         });
     })
+    .catch((error) => {
+        console.error("Database connection error:", error);
+    });
    
