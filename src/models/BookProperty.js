@@ -1,6 +1,5 @@
 const mongoose = require("mongoose");
-
-const visitSchema = new mongoose.Schema(
+const bookPropertySchema = new mongoose.Schema(
   {
     tenant: { 
       type: mongoose.Schema.Types.ObjectId, 
@@ -17,35 +16,23 @@ const visitSchema = new mongoose.Schema(
       ref: "Property", 
       required: true 
     }, 
-    visitDate: { 
+    bookingDate: { 
       type: Date, 
       required: true 
     }, 
-    visitTime: { 
+    bookingTime: { 
       type: String, 
       required: true 
     }, 
-    previousVisitDate: { 
-      type: Date 
-    }, // Store old date when rescheduled
-    previousVisitTime: { 
-      type: String 
-    }, // Store old time when rescheduled
     status: { 
       type: String, 
-      enum: ["scheduled", "rescheduled", "completed", "cancelled"], 
-      default: "scheduled" 
+      enum: ["booked", "completed", "cancelled"], 
+      default: "booked" 
     },
     message: { 
       type: String, 
       trim: true 
-    }, //store message from tenant to landlord
-    cancellationReason: { 
-      type: String, 
-      trim: true 
-    } // Store reason if visit is cancelled
+    }, // Store message from tenant to landlord
   },
   { timestamps: true }
 );
-
-module.exports = mongoose.model("Visit", visitSchema);

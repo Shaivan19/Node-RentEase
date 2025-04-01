@@ -22,11 +22,14 @@ const userRoutes = require("./src/routes/UserRoutes");
 const propertyRoutes = require("./src/routes/PropertyRoutes");
 const visitpropertyRoutes = require("./src/routes/VisitpropertyRoutes");
 const imageRoutes = require("./src/routes/ImageRoutes");
+const bookpropertyRoutes = require("./src/routes/BookpropertyRoutes");
+
 app.use("/api", roleRoutes); //  Add API prefix
 app.use(userRoutes);
 app.use( propertyRoutes); 
 app.use(visitpropertyRoutes);
 app.use(imageRoutes);
+app.use(bookpropertyRoutes);
 
 // MongoDB Connection
 mongoose.connect("mongodb://127.0.0.1:27017/SAMPLE_PROJECT")

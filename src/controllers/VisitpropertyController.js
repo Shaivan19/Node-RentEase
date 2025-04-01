@@ -169,3 +169,53 @@ exports.cancelVisit = async (req, res) => {
   }
 };
 
+// ✅ Update Visit Details
+exports.updateVisit = async (req, res) => {
+  try {
+    const { visitDate, visitTime, message } = req.body;
+    const visit = await Visit.findById(req.params.id);
+
+    if (!visit) return res.status(404).json({ message: "Visit not found" });
+
+    // Update visit details
+    visit.visitDate = visitDate || visit.visitDate;
+    visit.visitTime = visitTime || visit.visitTime;
+    visit.message = message || visit.message;
+
+    await visit.save();
+
+    res.status(200).json({ message: "Visit updated successfully", visit });
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
+
+//delete visit
+exports.deleteVisit = async (req, res) => {
+  try {
+    const visit = await Visit.findByIdAndDelete(req.params.id);
+
+    if (!visit) return res.status(404).json({ message: "Visit not found" });
+
+    res.status(200).json({ message: "Visit deleted successfully" });
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
+
+//get all visits by tenant id
+exports.getVisitsByTenantId = async (req, res) => {
+  try {
+    const tenantId = req.params.id;
+    const visits = await Visit.find({ tenant: tenantId })
+      .populate("property", "title location")
+      .populate("tenant", "name email");
+
+    if (!visits || visits.length === 0) return res.status(404).json({ message: "No visits found" });
+
+    res.status(200).json(visits);
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
+
