@@ -24,6 +24,12 @@ const bookPropertySchema = new mongoose.Schema(
       type: String, 
       required: true 
     }, 
+    previousBookingDate: { 
+      type: Date 
+    }, // Store old date when rescheduled
+    previousBookingTime: { 
+      type: String 
+    }, // Store old time when rescheduled
     status: { 
       type: String, 
       enum: ["booked", "completed", "cancelled"], 
@@ -33,6 +39,12 @@ const bookPropertySchema = new mongoose.Schema(
       type: String, 
       trim: true 
     }, // Store message from tenant to landlord
+    cancellationReason: { 
+      type: String, 
+      trim: true 
+    } // Store reason if booking is cancelled
   },
   { timestamps: true }
 );
+
+module.exports = mongoose.model("BookProperty", bookPropertySchema);
