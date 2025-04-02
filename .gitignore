@@ -135,11 +135,13 @@ dist
 .yarn/install-state.gz
 .pnp.*
 
-.uploads
+# Ignore uploads folder
+uploads/
+
 
 
 .CloudinaryUtils
 
 .MailUtils
 
-.components
+components/
