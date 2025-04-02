@@ -136,3 +136,8 @@ dist
 .pnp.*
 
 .uploads
+
+
+.CloudinaryUtils
+
+.MailUtils
