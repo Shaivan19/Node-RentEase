@@ -1,9 +1,9 @@
 const routes = require("express").Router()
 const userController = require("../controllers/UserController")
 const { verifyToken, isLandlord, isTenant } = require("../middleware/authMiddleware")
-const Property = require("../models/Property")
-const VisitProperty = require("../models/VisitProperty")
-const BookProperty = require("../models/BookProperty")
+// const Property = require("../models/Property")
+// const VisitProperty = require("../models/VisitProperty")
+// const BookProperty = require("../models/BookProperty")
 
 // Public routes
 routes.post("/users/login", userController.login)
