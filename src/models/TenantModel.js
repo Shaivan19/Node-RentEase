@@ -14,6 +14,10 @@ const TenantSchema = new mongoose.Schema({
       type: String,
       required: true 
     },
+  phone: {
+      type: String,
+      required: true
+  },  
   avatar: {
       type: String,
       default: null
@@ -22,6 +26,12 @@ const TenantSchema = new mongoose.Schema({
       type: String,
       default: "Tenant"
   },
+  savedProperties: [
+      {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "Property"
+      }
+  ],
   resetPasswordToken: String,
   resetPasswordExpires: Date
 });

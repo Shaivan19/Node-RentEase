@@ -251,11 +251,99 @@ const getPropertiesByLandlord = async (req, res) => {
   }
 };
 
+
+const updateProperty = async (req, res) => {
+  try {
+    console.log("\n=== Property Update Request ===");
+    console.log("Property ID:", req.params.id);
+    console.log("Request Body:", JSON.stringify(req.body, null, 2));
+    console.log("Request Files:", req.files ? req.files.map(f => f.filename) : 'No files');
+
+    const propertyId = req.params.id;
+    
+    // Check if property exists
+    const existingProperty = await Property.findById(propertyId);
+    if (!existingProperty) {
+      return res.status(404).json({ error: "Property not found" });
+    }
+
+    // Handle new image uploads to Cloudinary
+    let imageUrls = [...existingProperty.images]; // Keep existing images
+    if (req.files && req.files.length > 0) {
+      try {
+        // Upload each new image to Cloudinary
+        for (const file of req.files) {
+          const cloudinaryResponse = await cloudinaryUtil.uploadFileToCloudinary(file);
+          imageUrls.push(cloudinaryResponse.secure_url);
+        }
+      } catch (uploadError) {
+        console.error("Cloudinary Upload Error:", uploadError);
+        return res.status(500).json({ error: "Error uploading images to cloud storage" });
+      }
+    }
+
+    // Prepare update data
+    const updateData = {
+      ...req.body,
+      images: imageUrls,
+      furnished: req.body.furnished === 'true',
+      amenities: req.body.amenities ? req.body.amenities.split(',') : existingProperty.amenities
+    };
+
+    // Update property
+    const updatedProperty = await Property.findByIdAndUpdate(
+      propertyId,
+      updateData,
+      { new: true, runValidators: true }
+    );
+
+    // Send update confirmation email to landlord
+    const landlord = await Landlord.findById(existingProperty.owner);
+    if (landlord) {
+      const emailSubject = "Property Updated Successfully!";
+      const emailBody = `
+        Dear ${landlord.username},
+
+        Your property "${updatedProperty.title}" has been successfully updated on RentEase.
+
+        Updated Property Details:
+        - Title: ${updatedProperty.title}
+        - Location: ${updatedProperty.location}
+        - Price: ₹${updatedProperty.price}
+        - Type: ${updatedProperty.propertyType}
+        - Bedrooms: ${updatedProperty.bedrooms}
+        - Bathrooms: ${updatedProperty.bathrooms}
+        - Available From: ${new Date(updatedProperty.availableFrom).toLocaleDateString()}
+        - Address: ${updatedProperty.address.street}, ${updatedProperty.address.city}, ${updatedProperty.address.state} ${updatedProperty.address.zipCode}, ${updatedProperty.address.country}
+
+        You can view the updated listing from your dashboard.
+
+        Best regards,
+        The RentEase Team
+      `;
+
+      try {
+        await mailutil.sendingMail(landlord.email, emailSubject, emailBody);
+        console.log("✅ Property update confirmation email sent successfully");
+      } catch (emailError) {
+        console.error("🔥 Error sending property update email:", emailError);
+        // Don't fail the request if email fails
+      }
+    }
+
+    res.status(200).json(updatedProperty);
+  } catch (error) {
+    console.error("Property Update Error:", error);
+    res.status(400).json({ error: error.message });
+  }
+};
+
 module.exports = { 
   createProperty, 
   getAllProperties, 
   getPropertyById, 
   deleteProperty, 
   upload,
-  getPropertiesByLandlord 
+  getPropertiesByLandlord,
+  updateProperty
 };

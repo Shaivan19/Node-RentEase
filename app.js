@@ -24,6 +24,7 @@ const visitpropertyRoutes = require("./src/routes/VisitpropertyRoutes");
 const imageRoutes = require("./src/routes/ImageRoutes");
 const bookpropertyRoutes = require("./src/routes/BookpropertyRoutes");
 
+
 app.use("/api", roleRoutes); //  Add API prefix
 app.use(userRoutes);
 app.use( propertyRoutes); 

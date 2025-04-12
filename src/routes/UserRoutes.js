@@ -4,6 +4,7 @@ const { verifyToken, isLandlord, isTenant } = require("../middleware/authMiddlew
 // const Property = require("../models/Property")
 // const VisitProperty = require("../models/VisitProperty")
 // const BookProperty = require("../models/BookProperty")
+const dashboardController = require("../controllers/DashboardController")
 
 // Public routes
 routes.post("/users/login", userController.login)
@@ -23,12 +24,9 @@ routes.put("/profile/password", verifyToken, userController.updatePassword)
 routes.post("/profile/avatar", verifyToken, userController.upload.single('avatar'), userController.updateAvatar)
 
 // Role-specific routes
-routes.get("/landlord/dashboard", verifyToken, isLandlord, (req, res) => {
-    res.json({ message: "Landlord dashboard accessed successfully" })
-})
+routes.get("/landlord/dashboard", verifyToken, isLandlord, dashboardController.getLandlordDashboard)
+routes.get("/tenant/dashboard", verifyToken, isTenant, dashboardController.getTenantDashboard)
 
-routes.get("/tenant/dashboard", verifyToken, isTenant, (req, res) => {
-    res.json({ message: "Tenant dashboard accessed successfully" })
-})
+routes.post("/tenant/save-property/:propertyId", verifyToken, isTenant, userController.saveProperty)
 
 module.exports = routes

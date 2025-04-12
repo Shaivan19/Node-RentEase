@@ -10,5 +10,7 @@ routes.get("/properties", propertyController.getAllProperties);
 routes.get("/properties/:id", propertyController.getPropertyById);
 routes.delete("/properties/:id", propertyController.deleteProperty);
 routes.get("/properties/landlord/:landlordId", propertyController.getPropertiesByLandlord);
+// routes.put("/properties/:id", propertyController.updateProperty);
+routes.put("/properties/:id", propertyController.upload.array("images", 5), propertyController.updateProperty);
 
 module.exports = routes;

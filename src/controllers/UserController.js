@@ -2,7 +2,8 @@ const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const Tenant = require("../models/TenantModel");
 const Landlord = require("../models/LandlordModel");
-const mailutil = require("../utils/MailUtil");
+// const mailutil = require("../utils/MailUtil");
+const { sendingMail } = require("../utils/MailUtil");
 const multer = require("multer");
 const path = require("path");
 const crypto = require('crypto');
@@ -94,7 +95,7 @@ const signup = async (req, res) => {
     let newUser;
 
     if (userType === "tenant") {
-      newUser = await Tenant.create({ username, email, password: hashedPassword });
+      newUser = await Tenant.create({ username, email, password: hashedPassword, phone });
     } else if (userType === "landlord") {
       if (!phone) {
         return res.status(400).json({ message: "Phone number is required for landlords." });
@@ -106,7 +107,7 @@ const signup = async (req, res) => {
 
     console.log("✅ User Created Successfully:", newUser);
 
-    await mailutil.sendingMail(
+    await sendingMail(
       email,
       "Welcome to RentEase!",
       `Hello ${username},\n\nCongratulations! 🎉 Your account has been successfully created on RentEase.\n\nStart exploring rental properties or listing your own with ease.\n\n- The RentEase Team`
@@ -222,7 +223,7 @@ const updateUserProfile = async (req, res) => {
     // Update fields if provided
     if (username) user.username = username;
     if (email) user.email = email;
-    if (phone && userType === "Landlord") user.phone = phone;
+    if (phone) user.phone = phone;
 
     await user.save();
 
@@ -386,6 +387,48 @@ const resetPassword = async (req, res) => {
   }
 };
 
+//----sAVED poperties---//
+
+const saveProperty = async (req, res) => {
+  try{
+    const propertyId = req.params.propertyId;
+    const tenantId= req.user.id;
+
+    //lets chevck if tenant exist
+
+    const tenant = await Tenant.findById(tenantId);
+    if (!tenant) {
+      return res.status(404).json({ message: "Tenant not found." });
+    }
+
+    //lets chek if property exists
+    const property = await Property.findById(propertyId);
+    if (!property) {
+      return res.status(404).json({ message: "Property not found." });
+    }
+
+    // Check if property is already saved
+    if (tenant.savedProperties.includes(propertyId)) {
+      return res.status(400).json({ message: "Property already saved." });
+    }
+
+    //add property to saved propwreties
+    tenant.savedProperties.push(propertyId);
+    await tenant.save();
+
+    res.status(200).json({
+      message:"proeprty saved successfully",
+      savedProperty: property,
+    });
+  }catch(error){
+    console.error("Error saving property:", error);
+    res.status(500).json({ message: "Error saving property.", error: error.message });
+  }
+};
+
+
+
+
 module.exports = {
   login,
   signup,
@@ -398,5 +441,6 @@ module.exports = {
   updateAvatar,
   upload,
   requestPasswordReset,
-  resetPassword
+  resetPassword,
+  saveProperty,
 };

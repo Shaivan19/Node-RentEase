@@ -54,8 +54,19 @@ const propertySchema = new mongoose.Schema(
       ref: "User",
       required: true,
     },
+    // Add currentTenant field
+    currentTenant: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      default: null
+    },
+    // Add savedBy field for saved properties feature
+    savedBy: [{
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User"
+    }],
     images: {
-      type: [String], // Array of image URLs
+      type: [String],
       required: true,
       default: [],
     },
@@ -79,14 +90,19 @@ const propertySchema = new mongoose.Schema(
       default: false,
     },
     availableFrom: {
-      type: Date, // Optional if available immediately
+      type: Date,
     },
     amenities: {
-      type: [String], // Array of amenities (e.g., "WiFi", "Gym")
+      type: [String],
       default: [],
     },
+    status: {
+      type: String,
+      enum: ["Available", "Occupied", "Maintenance", "Reserved"],
+      default: "Available"
+    }
   },
-  { timestamps: true } // Adds createdAt & updatedAt automatically
+  { timestamps: true }
 );
 
 const Property = mongoose.model("Property", propertySchema);
