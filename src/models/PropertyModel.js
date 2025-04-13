@@ -22,6 +22,53 @@ const propertySchema = new mongoose.Schema(
       required: true,
       trim: true,
     },
+
+    area: {
+      type: Number,
+      required: true,
+      min: 0,
+    },
+
+    landArea: {
+      value: {
+        type: Number,
+        required: true,
+      },
+      unit: {
+        type: String,
+        enum: ['sqft', 'sqm', 'acres', 'hectares'],
+        default: 'sqft'
+      }
+    },
+    
+    constructionYear: {
+      type: Number,
+      required: true,
+    },
+    
+    nearbyFacilities: [{
+      name: {
+        type: String,
+        required: true,
+      },
+      type: {
+        type: String,
+        enum: ['School', 'Hospital', 'Shopping Mall', 'Park', 'Metro Station', 'Bus Stop', 'Restaurant', 'Bank', 'Other'],
+        required: true,
+      },
+      distance: {
+        value: {
+          type: Number,
+          required: true,
+        },
+        unit: {
+          type: String,
+          enum: ['km', 'mi'],
+          default: 'km'
+        }
+      }
+    }],
+
     address: {
       street: {
         type: String,
@@ -51,7 +98,7 @@ const propertySchema = new mongoose.Schema(
     },
     owner: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
+      ref: "Landlord",
       required: true,
     },
     // Add currentTenant field
@@ -102,6 +149,8 @@ const propertySchema = new mongoose.Schema(
       default: "Available"
     }
   },
+
+  
   { timestamps: true }
 );
 

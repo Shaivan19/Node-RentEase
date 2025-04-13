@@ -51,8 +51,30 @@ const createProperty = async (req, res) => {
       availableFrom,
       address,
       furnished,
-      amenities 
-    } = req.body;
+      amenities,
+      constructionYear
+    } = req.body;  // Remove area from destructuring since we'll parse it from landArea
+
+    // Parse landArea
+    let parsedLandArea = null;
+    if (req.body.landArea) {
+      try {
+        parsedLandArea = JSON.parse(req.body.landArea);
+      } catch (e) {
+        console.error('Error parsing landArea:', e);
+        return res.status(400).json({ error: "Invalid landArea format" });
+      }
+    }
+
+    // Parse nearbyFacilities
+    let parsedNearbyFacilities = [];
+    if (req.body.nearbyFacilities) {
+      try {
+        parsedNearbyFacilities = JSON.parse(req.body.nearbyFacilities);
+      } catch (e) {
+        console.error('Error parsing nearbyFacilities:', e);
+      }
+    }
 
     console.log("\n=== Parsed Fields ===");
     console.log("Title:", title);
@@ -67,6 +89,7 @@ const createProperty = async (req, res) => {
     console.log("Address:", address);
     console.log("Furnished:", furnished);
     console.log("Amenities:", amenities);
+    console.log("Area:", parsedLandArea ? Number(parsedLandArea.value) : null);  // Update the log to use parsedLandArea
 
     // Check for missing required fields
     const missingFields = {
@@ -79,14 +102,17 @@ const createProperty = async (req, res) => {
       bedrooms: bedrooms == null,
       bathrooms: bathrooms == null,
       availableFrom: !availableFrom,
-      address: !address
+      address: !address,
+      area: !parsedLandArea,  // Update to use parsedLandArea
+      nearbyFacilities: !parsedNearbyFacilities,
+      constructionYear: !constructionYear
     };
 
     console.log("\n=== Missing Fields Check ===");
     console.log(JSON.stringify(missingFields, null, 2));
 
     if (!title || !description || !price || !location || !owner || !propertyType || 
-        bedrooms == null || bathrooms == null || !availableFrom || !address) {
+        bedrooms == null || bathrooms == null || !availableFrom || !address || !parsedLandArea) {
       return res.status(400).json({ 
         error: "Missing required fields",
         missingFields: Object.entries(missingFields)
@@ -142,17 +168,30 @@ const createProperty = async (req, res) => {
       }
     }
 
-    // Create property with Cloudinary image URLs
+    // Create property with all parsed data
     const property = new Property({
-      ...req.body,
-      images: imageUrls,
+      title,
+      description,
+      price: Number(price),
+      location,
+      owner,
+      propertyType,
+      bedrooms: Number(bedrooms),
+      bathrooms: Number(bathrooms),
       furnished: furnished === 'true',
-      amenities: amenities ? amenities.split(',') : []
+      availableFrom,
+      address,
+      amenities: amenities ? amenities.split(',') : [],
+      images: imageUrls,
+      area: parsedLandArea ? Number(parsedLandArea.value) : null,
+      landArea: parsedLandArea, // Include the full landArea object
+      nearbyFacilities: parsedNearbyFacilities,
+      constructionYear: Number(constructionYear)
     });
 
     await property.save();
 
-    // Send confirmation email to landlord
+    // Update the email template to include area
     const emailSubject = "Property Listed Successfully!";
     const emailBody = `
       Dear ${landlord.username},
@@ -164,6 +203,7 @@ const createProperty = async (req, res) => {
       - Location: ${location}
       - Price: ₹${price}
       - Type: ${propertyType}
+      - Area: ${parsedLandArea ? Number(parsedLandArea.value) : null} sq ft
       - Bedrooms: ${bedrooms}
       - Bathrooms: ${bathrooms}
       - Available From: ${new Date(availableFrom).toLocaleDateString()}
@@ -203,13 +243,37 @@ const getAllProperties = async (req, res) => {
 // Get single property by ID
 const getPropertyById = async (req, res) => {
   try {
-    const property = await Property.findById(req.params.id);
+    console.log("Fetching property with ID:", req.params.id);
+    
+    const property = await Property.findById(req.params.id)
+      .populate({
+        path: 'owner',
+        model: 'Landlord',  // Keep it as User
+        select: 'username email phone' // Include role if needed
+      });
+
     if (!property) {
+      console.log("Property not found");
       return res.status(404).json({ message: "Property not found" });
     }
+
+    // Log the populated property for debugging
+    console.log("Found property with owner details:", {
+      id: property._id,
+      owner: property.owner ? {
+        username: property.owner.username,
+        email: property.owner.email,
+        phone: property.owner.phone
+      } : null
+    });
+
     res.status(200).json(property);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error("Error in getPropertyById:", error);
+    res.status(500).json({ 
+      error: "Error fetching property details",
+      details: error.message 
+    });
   }
 };
 
@@ -282,12 +346,37 @@ const updateProperty = async (req, res) => {
       }
     }
 
+    // Parse landArea for update
+    let parsedLandArea = existingProperty.landArea;
+    if (req.body.landArea) {
+      try {
+        parsedLandArea = JSON.parse(req.body.landArea);
+      } catch (e) {
+        console.error('Error parsing landArea during update:', e);
+        return res.status(400).json({ error: "Invalid landArea format" });
+      }
+    }
+
+    // Parse nearbyFacilities for update
+    let parsedNearbyFacilities = existingProperty.nearbyFacilities;
+    if (req.body.nearbyFacilities) {
+      try {
+        parsedNearbyFacilities = JSON.parse(req.body.nearbyFacilities);
+      } catch (e) {
+        console.error('Error parsing nearbyFacilities during update:', e);
+      }
+    }
+
     // Prepare update data
     const updateData = {
       ...req.body,
       images: imageUrls,
       furnished: req.body.furnished === 'true',
-      amenities: req.body.amenities ? req.body.amenities.split(',') : existingProperty.amenities
+      amenities: req.body.amenities ? req.body.amenities.split(',') : existingProperty.amenities,
+      area: parsedLandArea ? Number(parsedLandArea.value) : existingProperty.area,
+      landArea: parsedLandArea,
+      nearbyFacilities: parsedNearbyFacilities,
+      constructionYear: req.body.constructionYear ? Number(req.body.constructionYear) : existingProperty.constructionYear
     };
 
     // Update property
@@ -311,6 +400,7 @@ const updateProperty = async (req, res) => {
         - Location: ${updatedProperty.location}
         - Price: ₹${updatedProperty.price}
         - Type: ${updatedProperty.propertyType}
+        - Area: ${parsedLandArea ? Number(parsedLandArea.value) : updatedProperty.area} sq ft
         - Bedrooms: ${updatedProperty.bedrooms}
         - Bathrooms: ${updatedProperty.bathrooms}
         - Available From: ${new Date(updatedProperty.availableFrom).toLocaleDateString()}
